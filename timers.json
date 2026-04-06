@@ -1,0 +1,11 @@
+[
+  {
+    "name": "YouTube",
+    "domains": ["youtube.com", "www.youtube.com", "m.youtube.com"],
+    "daily_minutes": 30,
+    "used_minutes": 0,
+    "last_reset": "2026-04-07",
+    "active_session_end": null,
+    "session_start": null
+  }
+]

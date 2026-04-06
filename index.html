@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blocked</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            padding: 2rem;
+        }
+        .container { max-width: 600px; width: 100%; text-align: center; }
+        .icon { font-size: 4rem; margin-bottom: 1.5rem; opacity: 0.7; }
+        h1 {
+            font-size: 1.8rem; font-weight: 300;
+            letter-spacing: 0.05em; margin-bottom: 2rem; color: #fff;
+        }
+        .quote {
+            font-size: 1.2rem; line-height: 1.8; font-style: italic;
+            color: #a0a0a0; border-left: 2px solid #333;
+            padding-left: 1.5rem; margin-bottom: 1.5rem; text-align: left;
+        }
+        .author {
+            font-size: 0.9rem; color: #666;
+            margin-bottom: 2.5rem; text-align: left; padding-left: 1.5rem;
+        }
+        .message { font-size: 0.95rem; color: #555; line-height: 1.6; }
+        .breath {
+            margin-top: 2rem; margin-bottom: 3rem;
+            font-size: 0.85rem; color: #444;
+            letter-spacing: 0.1em; text-transform: uppercase;
+        }
+
+        /* Panels */
+        .panel {
+            border-top: 1px solid #1a1a1a;
+            padding-top: 2rem; margin-top: 1rem; text-align: left;
+        }
+        .panel h2 {
+            font-size: 0.8rem; font-weight: 500;
+            letter-spacing: 0.15em; text-transform: uppercase;
+            color: #444; margin-bottom: 1.2rem;
+        }
+        .add-form {
+            display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
+        }
+        .add-form input, .timer-form input, .timer-form select {
+            background: #141414; border: 1px solid #222; color: #ccc;
+            padding: 0.6rem 0.9rem; border-radius: 6px;
+            font-size: 0.9rem; outline: none; transition: border-color 0.2s;
+        }
+        .add-form input { flex: 1; }
+        .add-form input::placeholder, .timer-form input::placeholder { color: #3a3a3a; }
+        .add-form input:focus, .timer-form input:focus { border-color: #444; }
+        .btn {
+            background: #1a1a1a; border: 1px solid #222; color: #888;
+            padding: 0.6rem 1.2rem; border-radius: 6px;
+            font-size: 0.9rem; cursor: pointer; transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn:hover { background: #222; color: #ccc; border-color: #333; }
+        .site-list { list-style: none; }
+        .site-list li {
+            display: flex; align-items: center;
+            padding: 0.5rem 0; border-bottom: 1px solid #141414;
+            font-size: 0.9rem; color: #777;
+        }
+        .site-list li:last-child { border-bottom: none; }
+        .domain { font-family: 'SF Mono', Menlo, monospace; color: #999; }
+        .empty { color: #333; font-size: 0.85rem; font-style: italic; }
+
+        /* Timer cards */
+        .timer-card {
+            background: #111; border: 1px solid #1a1a1a; border-radius: 8px;
+            padding: 1.2rem; margin-bottom: 1rem;
+        }
+        .timer-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.8rem;
+        }
+        .timer-name { font-size: 1rem; font-weight: 500; color: #ccc; }
+        .timer-budget { font-size: 0.85rem; color: #555; }
+        .timer-domains {
+            font-family: 'SF Mono', Menlo, monospace;
+            font-size: 0.8rem; color: #555; margin-bottom: 0.8rem;
+        }
+        .timer-bar-bg {
+            width: 100%; height: 4px; background: #1a1a1a;
+            border-radius: 2px; margin-bottom: 0.8rem; overflow: hidden;
+        }
+        .timer-bar {
+            height: 100%; background: #444; border-radius: 2px;
+            transition: width 0.3s;
+        }
+        .timer-bar.low { background: #c44; }
+        .timer-bar.active { background: #4a7; }
+        .timer-actions { display: flex; gap: 0.5rem; align-items: center; }
+        .timer-status {
+            font-size: 0.85rem; color: #4a7; flex: 1;
+        }
+        .timer-status.exhausted { color: #c44; }
+        .btn-session {
+            background: #1a2a1a; border: 1px solid #2a3a2a; color: #6b6;
+            padding: 0.4rem 0.8rem; border-radius: 6px;
+            font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-session:hover { background: #2a3a2a; color: #8d8; border-color: #3a4a3a; }
+        .btn-session:disabled {
+            background: #1a1a1a; border-color: #222; color: #444; cursor: not-allowed;
+        }
+
+        /* Timer add form */
+        .timer-form {
+            display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .timer-form-row2 {
+            display: grid; grid-template-columns: 1fr auto; gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .toast {
+            position: fixed; bottom: 2rem; left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1a1a1a; border: 1px solid #333; color: #ccc;
+            padding: 0.6rem 1.2rem; border-radius: 8px;
+            font-size: 0.85rem; transition: transform 0.3s ease; z-index: 10;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+        .hint { font-size: 0.75rem; color: #333; margin-top: 0.3rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">&#9675;</div>
+        <h1>This site is blocked.</h1>
+        <div class="quote" id="quote-text"></div>
+        <div class="author" id="quote-author"></div>
+        <p class="message">You blocked this site because you want to protect your attention. Your brain doesn't need more stimulation — it needs space to think.</p>
+        <p class="breath">Take a breath. Get back to what matters.</p>
+
+        <!-- Timed Sites -->
+        <div class="panel">
+            <h2>Timed Sites</h2>
+            <div id="timer-cards"></div>
+            <details>
+                <summary style="color:#333;font-size:0.8rem;cursor:pointer;margin-bottom:0.8rem;">Add timed site</summary>
+                <div class="timer-form">
+                    <input type="text" id="timer-name" placeholder="Name (e.g. YouTube)" />
+                    <input type="number" id="timer-budget" placeholder="Min/day" value="60" min="1" style="width:100%" />
+                </div>
+                <div class="timer-form-row2">
+                    <input type="text" id="timer-domains" placeholder="Domains (comma-separated)" />
+                    <button class="btn" onclick="addTimer()">Add</button>
+                </div>
+                <p class="hint">e.g. youtube.com, www.youtube.com, m.youtube.com</p>
+            </details>
+        </div>
+
+        <!-- Permanently Blocked -->
+        <div class="panel">
+            <h2>Permanently Blocked</h2>
+            <div class="add-form">
+                <input type="text" id="new-domain" placeholder="example.com" />
+                <button class="btn" onclick="addSite()">Block</button>
+            </div>
+            <ul class="site-list" id="site-list"></ul>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        var quotes = [
+            { text: "The successful warrior is the average man, with laser-like focus.", author: "Bruce Lee" },
+            { text: "It is not that we have a short time to live, but that we waste a good deal of it.", author: "Seneca" },
+            { text: "What information consumes is rather obvious: it consumes the attention of its recipients. A wealth of information creates a poverty of attention.", author: "Herbert A. Simon" },
+            { text: "The mind is sharper and keener in seclusion and uninterrupted solitude. Originality thrives in seclusion free of outside influences beating upon us to cripple the creative mind.", author: "Nikola Tesla" },
+            { text: "Almost everything will work again if you unplug it for a few minutes, including you.", author: "Anne Lamott" },
+            { text: "Your brain is for having ideas, not holding them.", author: "David Allen" },
+            { text: "The ability to concentrate and to use your time well is everything.", author: "Lee Iacocca" },
+            { text: "Starve your distractions, feed your focus.", author: "Daniel Goleman" },
+            { text: "You will never reach your destination if you stop and throw stones at every dog that barks.", author: "Winston Churchill" },
+            { text: "The constant stimulation of our brains by digital noise robs us of the deep thinking that produces real insight.", author: "Cal Newport" }
+        ];
+        var q = quotes[Math.floor(Math.random() * quotes.length)];
+        document.getElementById("quote-text").textContent = q.text;
+        document.getElementById("quote-author").textContent = "\u2014 " + q.author;
+
+        function showToast(msg) {
+            var t = document.getElementById("toast");
+            t.textContent = msg;
+            t.classList.add("show");
+            setTimeout(function() { t.classList.remove("show"); }, 2500);
+        }
+
+        // --- Permanent blocks ---
+        function loadSites() {
+            fetch("/api/sites")
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    // Filter out domains managed by timers
+                    fetch("/api/timers")
+                        .then(function(r2) { return r2.json(); })
+                        .then(function(tdata) {
+                            var timedDomains = {};
+                            tdata.timers.forEach(function(t) {
+                                t.domains.forEach(function(d) { timedDomains[d] = true; });
+                            });
+                            var list = document.getElementById("site-list");
+                            list.innerHTML = "";
+                            var permanent = data.domains.filter(function(d) { return !timedDomains[d]; });
+                            if (permanent.length === 0) {
+                                list.innerHTML = '<li class="empty">No sites permanently blocked yet.</li>';
+                                return;
+                            }
+                            permanent.forEach(function(d) {
+                                var li = document.createElement("li");
+                                li.innerHTML = '<span class="domain">' + d + '</span>';
+                                list.appendChild(li);
+                            });
+                        });
+                });
+        }
+
+        function addSite() {
+            var input = document.getElementById("new-domain");
+            var domain = input.value.trim().toLowerCase();
+            if (!domain) return;
+            domain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+            fetch("/api/sites", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ domain: domain })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    input.value = "";
+                    showToast("Blocked " + domain);
+                    loadSites();
+                } else {
+                    showToast(data.message || "Error");
+                }
+            });
+        }
+
+        document.getElementById("new-domain").addEventListener("keydown", function(e) {
+            if (e.key === "Enter") addSite();
+        });
+
+        // --- Timers ---
+        function loadTimers() {
+            fetch("/api/timers")
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var container = document.getElementById("timer-cards");
+                    container.innerHTML = "";
+                    if (data.timers.length === 0) {
+                        container.innerHTML = '<p class="empty">No timed sites yet.</p>';
+                        return;
+                    }
+                    data.timers.forEach(function(t) {
+                        var pct = Math.max(0, (t.remaining_minutes / t.daily_minutes) * 100);
+                        var barClass = "timer-bar";
+                        if (t.session_active) barClass += " active";
+                        else if (pct <= 20) barClass += " low";
+
+                        var statusHtml = "";
+                        var buttonsHtml = "";
+
+                        if (t.session_active) {
+                            statusHtml = '<span class="timer-status">Active — ' + t.session_remaining_minutes + ' min left in session</span>';
+                        } else if (t.remaining_minutes <= 0) {
+                            statusHtml = '<span class="timer-status exhausted">Daily limit reached. Resets at midnight.</span>';
+                        } else {
+                            statusHtml = '<span class="timer-status" style="color:#888">' + t.remaining_minutes + ' min remaining today</span>';
+                            var sessionOptions = [15, 30, 60].filter(function(m) { return m <= t.remaining_minutes; });
+                            if (sessionOptions.length === 0 && t.remaining_minutes > 0) {
+                                sessionOptions = [t.remaining_minutes];
+                            }
+                            sessionOptions.forEach(function(m) {
+                                buttonsHtml += '<button class="btn-session" onclick="startSession(\'' +
+                                    t.name.replace(/'/g, "\\'") + '\', ' + m + ')">' + m + ' min</button>';
+                            });
+                        }
+
+                        var card = document.createElement("div");
+                        card.className = "timer-card";
+                        card.innerHTML =
+                            '<div class="timer-header">' +
+                                '<span class="timer-name">' + t.name + '</span>' +
+                                '<span class="timer-budget">' + t.used_minutes.toFixed(0) + ' / ' + t.daily_minutes + ' min used</span>' +
+                            '</div>' +
+                            '<div class="timer-domains">' + t.domains.join(", ") + '</div>' +
+                            '<div class="timer-bar-bg"><div class="' + barClass + '" style="width:' + pct + '%"></div></div>' +
+                            '<div class="timer-actions">' + statusHtml + buttonsHtml + '</div>';
+                        container.appendChild(card);
+                    });
+                });
+        }
+
+        function startSession(name, minutes) {
+            fetch("/api/timers/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: name, minutes: minutes })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    showToast(data.message);
+                    loadTimers();
+                } else {
+                    showToast(data.message || "Error");
+                }
+            });
+        }
+
+        function addTimer() {
+            var name = document.getElementById("timer-name").value.trim();
+            var budget = parseInt(document.getElementById("timer-budget").value) || 60;
+            var domainsStr = document.getElementById("timer-domains").value.trim();
+            if (!name || !domainsStr) return showToast("Name and domains required");
+            var domains = domainsStr.split(",").map(function(d) {
+                return d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+            }).filter(function(d) { return d; });
+            if (domains.length === 0) return showToast("Enter at least one domain");
+            fetch("/api/timers", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: name, domains: domains, daily_minutes: budget })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    document.getElementById("timer-name").value = "";
+                    document.getElementById("timer-domains").value = "";
+                    showToast("Timer added for " + name);
+                    loadTimers();
+                    loadSites();
+                } else {
+                    showToast(data.message || "Error");
+                }
+            });
+        }
+
+        // Refresh timers every 30s to update countdowns
+        setInterval(loadTimers, 30000);
+
+        loadSites();
+        loadTimers();
+    </script>
+</body>
+</html>
