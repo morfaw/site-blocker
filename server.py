@@ -5,6 +5,7 @@ import http.server
 import json
 import os
 import re
+import ssl
 import subprocess
 import threading
 import time
@@ -13,6 +14,11 @@ from datetime import datetime, date
 BLOCKED_DIR = "/usr/local/share/blocked"
 HOSTS_FILE = "/etc/hosts"
 TIMERS_FILE = os.path.join(BLOCKED_DIR, "timers.json")
+CERTS_DIR = os.path.join(BLOCKED_DIR, "certs")
+CA_KEY = os.path.join(CERTS_DIR, "ca.key")
+CA_CERT = os.path.join(CERTS_DIR, "ca.crt")
+SERVER_KEY = os.path.join(CERTS_DIR, "server.key")
+SERVER_CERT = os.path.join(CERTS_DIR, "server.crt")
 MARKER_START = "# -- BLOCKED SITES --"
 MARKER_END = "# -- END BLOCKED SITES --"
 
@@ -303,10 +309,95 @@ class BlockedHandler(http.server.BaseHTTPRequestHandler):
         pass
 
 
+def regenerate_server_cert():
+    """Regenerate the server cert to include all currently blocked domains as SANs."""
+    domains = get_blocked_domains()
+    if not domains:
+        return
+    san_entries = ["DNS:" + d for d in domains] + ["IP:127.0.0.1"]
+    san_str = ",".join(san_entries)
+
+    # Generate server key
+    subprocess.run([
+        "openssl", "req", "-new", "-nodes",
+        "-keyout", SERVER_KEY,
+        "-out", os.path.join(CERTS_DIR, "server.csr"),
+        "-subj", "/CN=Site Blocker",
+    ], capture_output=True)
+
+    # Write SAN extension file
+    ext_file = os.path.join(CERTS_DIR, "san.ext")
+    with open(ext_file, "w") as f:
+        f.write(f"subjectAltName={san_str}\n")
+
+    # Sign with CA
+    subprocess.run([
+        "openssl", "x509", "-req",
+        "-in", os.path.join(CERTS_DIR, "server.csr"),
+        "-CA", CA_CERT, "-CAkey", CA_KEY, "-CAcreateserial",
+        "-out", SERVER_CERT,
+        "-days", "825",
+        "-extfile", ext_file,
+    ], capture_output=True)
+
+
+def ensure_certs():
+    """Ensure CA and server certs exist."""
+    os.makedirs(CERTS_DIR, exist_ok=True)
+    if not os.path.exists(CA_KEY):
+        # Generate CA
+        subprocess.run([
+            "openssl", "req", "-x509", "-new", "-nodes",
+            "-keyout", CA_KEY, "-out", CA_CERT,
+            "-days", "3650",
+            "-subj", "/CN=Site Blocker CA",
+        ], capture_output=True)
+        # Trust the CA in macOS Keychain
+        subprocess.run([
+            "security", "add-trusted-cert", "-d",
+            "-r", "trustRoot",
+            "-k", "/Library/Keychains/System.keychain",
+            CA_CERT,
+        ], capture_output=True)
+    regenerate_server_cert()
+
+
+# Hook into add_permanent_domain to regenerate cert
+_original_write_hosts = write_hosts
+def write_hosts_and_regen_cert(pre, domains, post):
+    _original_write_hosts(pre, domains, post)
+    if os.path.exists(CA_KEY):
+        regenerate_server_cert()
+        # Reload HTTPS server's SSL context if possible
+        global https_server
+        if https_server:
+            try:
+                ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                ctx.load_cert_chain(SERVER_CERT, SERVER_KEY)
+                https_server.socket = ctx.wrap_socket(https_server.socket, server_side=True)
+            except Exception:
+                pass
+write_hosts = write_hosts_and_regen_cert
+
+https_server = None
+
+
 if __name__ == "__main__":
     # Start background thread for checking expired sessions
     watcher = threading.Thread(target=check_expired_sessions, daemon=True)
     watcher.start()
 
-    server = http.server.HTTPServer(("127.0.0.1", 80), BlockedHandler)
-    server.serve_forever()
+    # Ensure certs exist
+    ensure_certs()
+
+    # HTTP server on port 80
+    http_server = http.server.HTTPServer(("127.0.0.1", 80), BlockedHandler)
+    http_thread = threading.Thread(target=http_server.serve_forever, daemon=True)
+    http_thread.start()
+
+    # HTTPS server on port 443
+    https_server = http.server.HTTPServer(("127.0.0.1", 443), BlockedHandler)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(SERVER_CERT, SERVER_KEY)
+    https_server.socket = ctx.wrap_socket(https_server.socket, server_side=True)
+    https_server.serve_forever()
