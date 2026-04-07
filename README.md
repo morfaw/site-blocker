@@ -9,6 +9,7 @@ A minimal, self-hosted website blocker for macOS. Redirects distracting sites to
 - **Auto-start** — runs as a launchd service, survives reboots
 - **One-way UI** — you can add blocks from the web page, but removing requires `sudo nano /etc/hosts`
 - **HTTPS support** — auto-generates a local CA and certs so browsers don't show "Not Secure" warnings
+- **Parental controls** — optional adult content blocklist (76k+ domains from [StevenBlack/hosts](https://github.com/StevenBlack/hosts))
 - **No dependencies** — just Python 3 (built into macOS), OpenSSL, and `/etc/hosts`
 
 ## How it works
@@ -40,6 +41,16 @@ Then restart Chrome (Cmd+Q and reopen) for it to pick up the new trusted CA.
 sudo bash upgrade.sh
 ```
 
+## Adult Content Blocklist
+
+Optionally block ~76k adult/porn domains using the curated StevenBlack blocklist:
+
+```bash
+sudo bash update-adult-blocklist.sh
+```
+
+Re-run periodically to get updates. To remove, edit `/etc/hosts` and delete the `ADULT CONTENT BLOCKLIST` section.
+
 ## Usage
 
 - Visit any blocked site → see the block page
@@ -57,6 +68,7 @@ sudo bash upgrade.sh
 | Timer state | `/usr/local/share/blocked/timers.json` |
 | CA cert | `/usr/local/share/blocked/certs/ca.crt` |
 | Server cert | `/usr/local/share/blocked/certs/server.crt` |
+| Adult blocklist updater | `/usr/local/share/blocked/update-adult-blocklist.sh` |
 | launchd plist | `/Library/LaunchDaemons/com.local.blocked-sites.plist` |
 
 ## Uninstall
