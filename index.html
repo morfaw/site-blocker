@@ -277,6 +277,8 @@
 
                         if (t.session_active) {
                             statusHtml = '<span class="timer-status">Active — ' + t.session_remaining_minutes + ' min left in session</span>';
+                            buttonsHtml = '<button class="btn-session" style="background:#2a1a1a;border-color:#3a2a2a;color:#b66" onclick="stopSession(\'' +
+                                t.name.replace(/'/g, "\\'") + '\')">Stop</button>';
                         } else if (t.remaining_minutes <= 0) {
                             statusHtml = '<span class="timer-status exhausted">Daily limit reached. Resets at midnight.</span>';
                         } else {
@@ -311,6 +313,27 @@
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: name, minutes: minutes })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    } else {
+                        showToast(data.message);
+                        loadTimers();
+                    }
+                } else {
+                    showToast(data.message || "Error");
+                }
+            });
+        }
+
+        function stopSession(name) {
+            fetch("/api/timers/stop", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: name })
             })
             .then(function(r) { return r.json(); })
             .then(function(data) {

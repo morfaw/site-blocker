@@ -181,7 +181,30 @@ def start_session(timer_name, minutes):
                 # Unblock the domains
                 for d in timer["domains"]:
                     unblock_domain(d)
-                return True, f"Unblocked for {minutes} min"
+                redirect = "https://" + timer["domains"][0]
+                return True, f"Unblocked for {minutes} min", redirect
+        return False, "Timer not found", None
+
+
+def stop_session(timer_name):
+    """Stop a timed session early — only charge time actually used."""
+    with timers_lock:
+        timers = load_timers()
+        for timer in timers:
+            if timer["name"] == timer_name:
+                if not timer["active_session_end"]:
+                    return False, "No active session"
+                now = time.time()
+                if timer["session_start"]:
+                    used = (now - timer["session_start"]) / 60
+                    timer["used_minutes"] += used
+                timer["active_session_end"] = None
+                timer["session_start"] = None
+                save_timers(timers)
+                # Re-block the domains
+                for d in timer["domains"]:
+                    block_domain(d)
+                return True, f"Session stopped ({used:.0f} min used)"
         return False, "Timer not found"
 
 
@@ -271,7 +294,17 @@ class BlockedHandler(http.server.BaseHTTPRequestHandler):
                 return self.send_json(400, {"error": "No body"})
             name = body.get("name", "")
             minutes = body.get("minutes", 15)
-            ok, msg = start_session(name, minutes)
+            ok, msg, redirect = start_session(name, minutes)
+            resp = {"ok": ok, "message": msg}
+            if redirect:
+                resp["redirect"] = redirect
+            self.send_json(200 if ok else 400, resp)
+        elif self.path == "/api/timers/stop":
+            body = self._read_body()
+            if not body:
+                return self.send_json(400, {"error": "No body"})
+            name = body.get("name", "")
+            ok, msg = stop_session(name)
             self.send_json(200 if ok else 400, {"ok": ok, "message": msg})
         else:
             self.send_json(404, {"error": "Not found"})
