@@ -324,6 +324,7 @@ def regenerate_server_cert():
         "-out", os.path.join(CERTS_DIR, "server.csr"),
         "-subj", "/CN=Site Blocker",
     ], capture_output=True)
+    os.chmod(SERVER_KEY, 0o600)
 
     # Write SAN extension file
     ext_file = os.path.join(CERTS_DIR, "san.ext")
@@ -352,6 +353,7 @@ def ensure_certs():
             "-days", "3650",
             "-subj", "/CN=Site Blocker CA",
         ], capture_output=True)
+        os.chmod(CA_KEY, 0o600)
         # Trust the CA in macOS Keychain
         subprocess.run([
             "security", "add-trusted-cert", "-d",
