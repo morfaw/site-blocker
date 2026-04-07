@@ -9,8 +9,8 @@ A minimal, self-hosted website blocker for macOS. Redirects distracting sites to
 - **Auto-start** — runs as a launchd service, survives reboots
 - **One-way UI** — you can add blocks from the web page, but removing requires `sudo nano /etc/hosts`
 - **HTTPS support** — auto-generates a local CA and certs so browsers don't show "Not Secure" warnings
-- **Parental controls** — optional adult content blocklist (76k+ domains from [StevenBlack/hosts](https://github.com/StevenBlack/hosts))
-- **No dependencies** — just Python 3 (built into macOS), OpenSSL, and `/etc/hosts`
+- **Parental controls** — optional adult content blocklist (76k+ domains via dnsmasq, from [StevenBlack/hosts](https://github.com/StevenBlack/hosts))
+- **No dependencies** — Python 3 (built into macOS), OpenSSL, and `/etc/hosts`. Optional: dnsmasq (via Homebrew) for large blocklists
 
 ## How it works
 
@@ -41,15 +41,19 @@ Then restart Chrome (Cmd+Q and reopen) for it to pick up the new trusted CA.
 sudo bash upgrade.sh
 ```
 
-## Adult Content Blocklist
+## Adult Content Blocklist (via dnsmasq)
 
-Optionally block ~76k adult/porn domains using the curated StevenBlack blocklist:
+Optionally block ~76k adult/porn domains using dnsmasq (a lightweight local DNS server). This is much faster than putting them in `/etc/hosts`, which would cause system-wide performance issues.
 
 ```bash
+# First-time setup: installs dnsmasq, downloads blocklist, configures DNS
+sudo bash setup-dnsmasq.sh
+
+# Update the blocklist later
 sudo bash update-adult-blocklist.sh
 ```
 
-Re-run periodically to get updates. To remove, edit `/etc/hosts` and delete the `ADULT CONTENT BLOCKLIST` section.
+To remove: `brew services stop dnsmasq` and restore your DNS settings in System Settings > Network.
 
 ## Usage
 
@@ -68,7 +72,8 @@ Re-run periodically to get updates. To remove, edit `/etc/hosts` and delete the 
 | Timer state | `/usr/local/share/blocked/timers.json` |
 | CA cert | `/usr/local/share/blocked/certs/ca.crt` |
 | Server cert | `/usr/local/share/blocked/certs/server.crt` |
-| Adult blocklist updater | `/usr/local/share/blocked/update-adult-blocklist.sh` |
+| dnsmasq blocklist | `/usr/local/share/blocked/adult-domains.conf` |
+| dnsmasq config | `/opt/homebrew/etc/dnsmasq.conf` |
 | launchd plist | `/Library/LaunchDaemons/com.local.blocked-sites.plist` |
 
 ## Uninstall
