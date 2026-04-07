@@ -126,6 +126,13 @@
             font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
         }
         .btn-stop:hover { background: #3a2a2a; color: #d88; border-color: #4a3a3a; }
+        .btn-go {
+            background: #1a2a1a; border: 1px solid #2a3a2a; color: #6b6;
+            padding: 0.4rem 1rem; border-radius: 6px;
+            font-size: 0.85rem; cursor: pointer; transition: all 0.2s;
+            text-decoration: none; display: inline-block;
+        }
+        .btn-go:hover { background: #2a3a2a; color: #8d8; border-color: #3a4a3a; }
         .custom-time {
             display: flex; gap: 0.3rem; align-items: center;
         }
@@ -299,8 +306,10 @@
                         var buttonsHtml = "";
 
                         if (t.session_active) {
-                            statusHtml = '<span class="timer-status">Active — ' + t.session_remaining_minutes + ' min left in session</span>';
+                            var site = "https://" + t.domains[0];
+                            statusHtml = '<span class="timer-status">Session active — ' + t.session_remaining_minutes + ' min remaining</span>';
                             buttonsHtml = '<div class="timer-buttons">' +
+                                '<a href="' + site + '" class="btn-go">Open ' + t.name + ' &rarr;</a>' +
                                 '<button class="btn-stop" onclick="stopSession(\'' + esc + '\')">Stop session</button>' +
                                 '</div>';
                         } else if (t.remaining_minutes <= 0) {
@@ -346,12 +355,8 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.ok) {
-                    if (data.redirect) {
-                        window.location.href = data.redirect;
-                    } else {
-                        showToast(data.message);
-                        loadTimers();
-                    }
+                    showToast(data.message);
+                    loadTimers();
                 } else {
                     showToast(data.message || "Error");
                 }
