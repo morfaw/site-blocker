@@ -224,8 +224,8 @@ def get_timers_status():
                 "name": timer["name"],
                 "domains": timer["domains"],
                 "daily_minutes": timer["daily_minutes"],
-                "used_minutes": timer["used_minutes"],
-                "remaining_minutes": max(0, remaining_budget),
+                "used_minutes": round(timer["used_minutes"]),
+                "remaining_minutes": max(0, round(remaining_budget)),
                 "session_active": timer["active_session_end"] is not None and timer["active_session_end"] > now,
                 "session_remaining_minutes": session_remaining,
             })

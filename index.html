@@ -101,11 +101,16 @@
         }
         .timer-bar.low { background: #c44; }
         .timer-bar.active { background: #4a7; }
-        .timer-actions { display: flex; gap: 0.5rem; align-items: center; }
+        .timer-actions {
+            display: flex; flex-direction: column; gap: 0.6rem;
+        }
         .timer-status {
-            font-size: 0.85rem; color: #4a7; flex: 1;
+            font-size: 0.85rem; color: #4a7;
         }
         .timer-status.exhausted { color: #c44; }
+        .timer-buttons {
+            display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;
+        }
         .btn-session {
             background: #1a2a1a; border: 1px solid #2a3a2a; color: #6b6;
             padding: 0.4rem 0.8rem; border-radius: 6px;
@@ -115,6 +120,23 @@
         .btn-session:disabled {
             background: #1a1a1a; border-color: #222; color: #444; cursor: not-allowed;
         }
+        .btn-stop {
+            background: #2a1a1a; border: 1px solid #3a2a2a; color: #b66;
+            padding: 0.4rem 0.8rem; border-radius: 6px;
+            font-size: 0.8rem; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-stop:hover { background: #3a2a2a; color: #d88; border-color: #4a3a3a; }
+        .custom-time {
+            display: flex; gap: 0.3rem; align-items: center;
+        }
+        .custom-time input {
+            width: 50px; background: #141414; border: 1px solid #222; color: #ccc;
+            padding: 0.35rem 0.5rem; border-radius: 6px; font-size: 0.8rem;
+            outline: none; text-align: center;
+        }
+        .custom-time input:focus { border-color: #444; }
+        .custom-time span { font-size: 0.75rem; color: #444; }
+        .separator { color: #222; margin: 0 0.1rem; }
 
         /* Timer add form */
         .timer-form {
@@ -272,25 +294,32 @@
                         if (t.session_active) barClass += " active";
                         else if (pct <= 20) barClass += " low";
 
+                        var esc = t.name.replace(/'/g, "\\'");
                         var statusHtml = "";
                         var buttonsHtml = "";
 
                         if (t.session_active) {
                             statusHtml = '<span class="timer-status">Active — ' + t.session_remaining_minutes + ' min left in session</span>';
-                            buttonsHtml = '<button class="btn-session" style="background:#2a1a1a;border-color:#3a2a2a;color:#b66" onclick="stopSession(\'' +
-                                t.name.replace(/'/g, "\\'") + '\')">Stop</button>';
+                            buttonsHtml = '<div class="timer-buttons">' +
+                                '<button class="btn-stop" onclick="stopSession(\'' + esc + '\')">Stop session</button>' +
+                                '</div>';
                         } else if (t.remaining_minutes <= 0) {
                             statusHtml = '<span class="timer-status exhausted">Daily limit reached. Resets at midnight.</span>';
                         } else {
                             statusHtml = '<span class="timer-status" style="color:#888">' + t.remaining_minutes + ' min remaining today</span>';
-                            var sessionOptions = [15, 30, 60].filter(function(m) { return m <= t.remaining_minutes; });
-                            if (sessionOptions.length === 0 && t.remaining_minutes > 0) {
-                                sessionOptions = [t.remaining_minutes];
-                            }
-                            sessionOptions.forEach(function(m) {
-                                buttonsHtml += '<button class="btn-session" onclick="startSession(\'' +
-                                    t.name.replace(/'/g, "\\'") + '\', ' + m + ')">' + m + ' min</button>';
+                            var presets = [5, 10, 15, 30, 60].filter(function(m) { return m <= t.remaining_minutes; });
+                            buttonsHtml = '<div class="timer-buttons">';
+                            presets.forEach(function(m) {
+                                buttonsHtml += '<button class="btn-session" onclick="startSession(\'' + esc + '\', ' + m + ')">' + m + '</button>';
                             });
+                            if (presets.length > 0) {
+                                buttonsHtml += '<span class="separator">|</span>';
+                            }
+                            buttonsHtml += '<div class="custom-time">' +
+                                '<input type="number" id="custom-' + esc + '" min="1" max="' + t.remaining_minutes + '" placeholder="' + t.remaining_minutes + '" />' +
+                                '<span>min</span>' +
+                                '<button class="btn-session" onclick="startCustomSession(\'' + esc + '\')">Go</button>' +
+                                '</div></div>';
                         }
 
                         var card = document.createElement("div");
@@ -298,7 +327,7 @@
                         card.innerHTML =
                             '<div class="timer-header">' +
                                 '<span class="timer-name">' + t.name + '</span>' +
-                                '<span class="timer-budget">' + t.used_minutes.toFixed(0) + ' / ' + t.daily_minutes + ' min used</span>' +
+                                '<span class="timer-budget">' + t.used_minutes + ' / ' + t.daily_minutes + ' min used</span>' +
                             '</div>' +
                             '<div class="timer-domains">' + t.domains.join(", ") + '</div>' +
                             '<div class="timer-bar-bg"><div class="' + barClass + '" style="width:' + pct + '%"></div></div>' +
@@ -327,6 +356,13 @@
                     showToast(data.message || "Error");
                 }
             });
+        }
+
+        function startCustomSession(name) {
+            var input = document.getElementById("custom-" + name);
+            var minutes = parseInt(input.value);
+            if (!minutes || minutes < 1) return showToast("Enter a valid number of minutes");
+            startSession(name, minutes);
         }
 
         function stopSession(name) {
